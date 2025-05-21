@@ -1,1 +1,2217 @@
+#include "Offset/SDK.hpp"
+using namespace SDK;
+using namespace std;
+#include <android/native_window_jni.h>
+#include <android/log.h>
+#include "Main/Tools.h"
+#include "Main/Dobby/Dobby.h"
+#include "Main/Includes.h"
+#include "Main/StrEnc.h"
+#include "Main/Vector3.hpp"
+#include "Main/Vector2.hpp"
+#include "Main/MemoryTools.h"
+#include "Main/KittyMemory/MemoryPatch.h"
+#include "Main/android_native_app_glue.h"
+#include "Main/obfuscate.h"
+#include "Main/THUNDER_GUI.h"
+#include <curl/curl.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <thread>
+#include <chrono>
+#include "Main/json.hpp"
+#include "Main/oxorany.cpp"
+////==========================================================================================================//
+bool bValid = false;
+bool isLogin = false;
+bool Expiry = true;
+static std::string EXP = "";
+std::string g_Token, g_Auth;
+using json = nlohmann::json;
+android_app *g_App = 0;
+#define SLEEP_TIME 1000LL / 120LL
+#define TSL_FONT_DEFAULT_SIZE 12
+std::map<int, bool> itemConfig;
+ANativeWindow *ANativeWindow_p;
+void android_main(struct android_app* state){
+}
+////==========================================================================================================//
+#define PI 3.14159265358979323846
+#define RAD2DEG(x) ((float)(x) * (float)(180.f / PI))
+#define GNames_Offset 0x78a0af8
+#define GNativeAndroidApp_Offset 0xd4a4778
+#define GUObject_Offset 0xd741460
+#define Actors_Offset 0xa0
+
+////==========================================================================================================//
+int screenWidth = -1, glWidth, screenHeight = -1, glHeight;
+float density = -1;
+uintptr_t UE4;
+FVector targetAimPos;
+////==========================================================================================================//
+float screenSizeX = 0;
+#define BONE_FOOT "foot_L"  // Ya "foot_R" (SDK se confirm karein)
+float screenSizeY = 0;
+float FOVsize = 150;
+float Speed_Aim = 1.5;
+float recoilCompensationFactor = 2.0;
+float Range = 100;
+bool AimBot[20];
+bool Bullet[20];
+bool ESP[20];
+bool head;
+bool Canvas1 = false;
+bool Canvas2 = false;
+bool AimHead = true;
+bool AimBody = false;
+int trackingType = 1;
+int scopeAndFire = 0;
+//bool Bullet[20];
+bool ggxhit;
+float 绘制距离 = 300;
+
+
+
+int (*MessageBoxExt)(unsigned int, const char16_t *, const char16_t *);
+ 
+std::u16string convertToUtf16(const std::string &utf8str)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+    return convert.from_bytes(utf8str);
+}
+
+
+std::string Fuck = " WELCOME TO BGMI HACKS  ";
+std::u16string f2 = convertToUtf16(Fuck);
+
+
+std::string Fuck1 = "Winner Winner Chicken Dinner - #1";
+std::u16string f3 = convertToUtf16(Fuck1);
+
+
+std::string Op4 = "Restart Your Game \nMust Send Feedback To Your Owner ";
+std::u16string xxx4 = convertToUtf16(Op4);
+
+
+const char *Gamepackage = "com.pubg.imobile";
+////==========================================================================================================//
+static bool isHead, isNeck, isPelvis, isLeftClavicle, isRightClavicle, 
+            isLeftUpperArm, isLeftLowerArm, isLeftHand, isLeftThigh, 
+            isLeftCalf, isLeftFoot, isRightUpperArm, isRightLowerArm, 
+            isRightHand, isRightThigh, isRightCalf, isRightFoot, 
+            isSpine1, isSpine2, isSpine3;
+static int algorithm = 0;
+
+struct sRegion
+{
+	uintptr_t start, end;
+};
+
+std::vector<sRegion> trapRegions;
+
+bool isEqual(std::string s1, const char* check) {
+    std::string s2(check);
+    return (s1 == s2);
+}
+
+bool isObjectInvalid(UObject *obj)
+{
+	if (!Tools::IsPtrValid(obj))
+	{
+		return true;
+	}
+	if (!Tools::IsPtrValid(obj->ClassPrivate))
+	{
+		return true;
+	}
+	if (obj->InternalIndex <= 0)
+	{
+		return true;
+	}
+	if (obj->NamePrivate.ComparisonIndex <= 0)
+	{
+		return true;
+	}
+	if ((uintptr_t)(obj) % sizeof(uintptr_t) != 0x0 && (uintptr_t)(obj) % sizeof(uintptr_t) != 0x4)
+	{
+		return true;
+	}
+	if (std::any_of(trapRegions.begin(), trapRegions.end(), [obj](sRegion region) { return ((uintptr_t)obj) >= region.start && ((uintptr_t)obj) <= region.end; }) ||
+		std::any_of(trapRegions.begin(), trapRegions.end(), [obj](sRegion region) { return ((uintptr_t)obj->ClassPrivate) >= region.start && ((uintptr_t)obj->ClassPrivate) <= region.end; }))
+	{
+		return true;
+	}
+	return false;
+}
+////==========================================================================================================//
+bool UrlLink;
+int OpenURL(const char* url)
+{
+    JavaVM* java_vm = g_App->activity->vm;
+    JNIEnv* java_env = NULL;
+
+    jint jni_return = java_vm->GetEnv((void**)&java_env, JNI_VERSION_1_6);
+    if (jni_return == JNI_ERR)
+        return -1;
+
+    jni_return = java_vm->AttachCurrentThread(&java_env, NULL);
+    if (jni_return != JNI_OK)
+        return -2;
+
+    jclass native_activity_clazz = java_env->GetObjectClass(g_App->activity->clazz);
+    if (native_activity_clazz == NULL)
+        return -3;
+
+    jmethodID method_id = java_env->GetMethodID(native_activity_clazz, "AndroidThunkJava_LaunchURL", "(Ljava/lang/String;)V");
+    if (method_id == NULL)
+        return -4;
+        
+    jstring retStr = java_env->NewStringUTF(url);
+    java_env->CallVoidMethod(g_App->activity->clazz, method_id, retStr);
+
+    jni_return = java_vm->DetachCurrentThread();
+    if (jni_return != JNI_OK)
+        return -5;
+
+    return 0;
+}
+
+
+//AIM.PERMISION
+int GetIndex(int currentIndex, int arrayNum) {
+    if (arrayNum <= 0) {
+        return 0;
+    }
+    return (currentIndex + 1) % arrayNum;
+}
+
+void clampAngles(FRotator &angles)
+{
+    if (angles.Pitch > 180)
+        angles.Pitch -= 360;
+    if (angles.Pitch < -180)
+        angles.Pitch += 360;
+    if (angles.Pitch < -75.f)
+        angles.Pitch = -75.f;
+    else if (angles.Pitch > 75.f)
+        angles.Pitch = 75.f;
+    while (angles.Yaw < -180.0f)
+        angles.Yaw += 360.0f;
+    while (angles.Yaw > 180.0f)
+        angles.Yaw -= 360.0f;
+}
+
+
+
+
+
+///==========================================================================================================//
+template<typename T>
+void Write(uintptr_t addr, T value) {
+WriteAddr((void *) addr, &value, sizeof(T));
+}
+void MemoryD_type(uintptr_t addr,int var){
+WriteAddr(reinterpret_cast<void*>(addr),reinterpret_cast<void*>(&var),4);
+}
+void MemoryQ_type(uintptr_t addr,int var){
+WriteAddr(reinterpret_cast<void*>(addr),reinterpret_cast<void*>(&var),32);
+}
+////==========================================================================================================//
+UWorld *GEWorld;
+int GWorldNum = 0;
+TUObjectArray gobjects;
+UWorld *GetFullWorld()
+{
+    if(GWorldNum == 0) {
+        gobjects = UObject::GUObjectArray->ObjObjects;
+        for (int i=0; i< gobjects.Num(); i++)
+            if (auto obj = gobjects.GetByIndex(i)) {
+                if(obj->IsA(UEngine::StaticClass())) {
+                    auto GEngine = (UEngine *) obj;
+                    if(GEngine) {
+                        auto ViewPort = GEngine->GameViewport;
+                        if (ViewPort)
+                        {
+                            GEWorld = ViewPort->World;
+                            GWorldNum = i;
+                            return ViewPort->World;
+                        }
+                    }
+                }
+            }
+    }else {
+        auto GEngine = (UEngine *) (gobjects.GetByIndex(GWorldNum));
+        if(GEngine) {
+            auto ViewPort = GEngine->GameViewport;
+            if(ViewPort) {
+                GEWorld = ViewPort->World;
+                return ViewPort->World;
+            }
+        }
+    }
+    return 0;
+}
+
+static UGameViewportClient *GameViewport = 0;
+UGameViewportClient *GetGameViewport() {
+    while (!GameViewport) {
+        GameViewport = UObject::FindObject<UGameViewportClient>("GameViewportClient Transient.UAEGameEngine_1.GameViewportClient_1");
+        sleep(1);
+    }
+    if (GameViewport) {
+        return GameViewport;
+    }
+    return 0;
+}
+
+std::vector<AActor *> getActors()
+{
+    auto World = GetFullWorld();
+    if (!World)
+        return std::vector<AActor *>();
+    auto PersistentLevel = World->PersistentLevel;
+    if (!PersistentLevel)
+        return std::vector<AActor *>();
+    auto Actors = *(TArray<AActor *> *)((uintptr_t)PersistentLevel + Actors_Offset);
+    std::vector<AActor *> actors;
+    for (int i = 0; i < Actors.Num(); i++)
+    {
+        auto Actor = Actors[i];
+        if (Actor)
+        {
+            actors.push_back(Actor);
+        }
+    }
+    return actors;
+}
+
+
+////==========================================================================================================//
+const char *GetVehicleName(ASTExtraVehicleBase *Vehicle) {
+    switch (Vehicle->VehicleShapeType) {
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Motorbike:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Motorbike_SideCart:
+            return "Motorbike";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Dacia:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_HeavyDacia:
+            return "Dacia";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_MiniBus:
+            return "Mini Bus";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_PickUp:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_PickUp01:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_HeavyPickup:
+            return "Pick Up";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Buggy:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_HeavyBuggy:
+            return "Buggy";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_UAZ:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_UAZ01:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_UAZ02:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_UAZ03:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_HeavyUAZ:
+            return "UAZ";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_PG117:
+            return "PG117";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Aquarail:
+            return "Aquarail";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Mirado:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Mirado01:
+            return "Mirado";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Rony:
+            return "Rony";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Scooter:
+            return "Scooter";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_SnowMobile:
+            return "Snow Mobile";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_TukTukTuk:
+            return "Tuk Tuk";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_SnowBike:
+            return "Snow Bike";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Surfboard:
+            return "Surf Board";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Snowboard:
+            return "Snow Board";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Amphibious:
+            return "Amphibious";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_LadaNiva:
+            return "Lada Niva";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_UAV:
+            return "UAV";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_MegaDrop:
+            return "Mega Drop";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Lamborghini:
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_Lamborghini01:
+            return "Lamborghini";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_GoldMirado:
+            return "Gold Mirado";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_BigFoot:
+            return "Big Foot";
+            break;
+        case ESTExtraVehicleShapeType::ESTExtraVehicleShapeType__VST_HeavyUH60:
+            return "UH60";
+            break;
+        default:
+            return "Vehicle";
+            break;
+    }
+    return "Vehicle";
+}
+////==========================================================================================================//
+std::string getClipboardText() {
+        if (!g_App)
+            return "";
+
+        auto activity = g_App->activity;
+        if (!activity)
+            return "";
+
+        auto vm = activity->vm;
+        if (!vm)
+            return "";
+
+        auto object = activity->clazz;
+        if (!object)
+            return "";
+
+        std::string result;
+
+        JNIEnv *env;
+        vm->AttachCurrentThread(&env, 0);
+        {
+            auto ContextClass = env->FindClass("android/content/Context");
+            auto getSystemServiceMethod = env->GetMethodID(ContextClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+
+            auto str = env->NewStringUTF("clipboard");
+            auto clipboardManager = env->CallObjectMethod(object, getSystemServiceMethod, str);
+            env->DeleteLocalRef(str);
+
+            auto ClipboardManagerClass = env->FindClass("android/content/ClipboardManager");
+            auto getText = env->GetMethodID(ClipboardManagerClass, "getText", "()Ljava/lang/CharSequence;");
+
+            auto CharSequenceClass = env->FindClass("java/lang/CharSequence");
+            auto toStringMethod = env->GetMethodID(CharSequenceClass, "toString", "()Ljava/lang/String;");
+
+            auto text = env->CallObjectMethod(clipboardManager, getText);
+            if (text) {
+                str = (jstring) env->CallObjectMethod(text, toStringMethod);
+                result = env->GetStringUTFChars(str, 0);
+                env->DeleteLocalRef(str);
+                env->DeleteLocalRef(text);
+            }
+
+            env->DeleteLocalRef(CharSequenceClass);
+            env->DeleteLocalRef(ClipboardManagerClass);
+            env->DeleteLocalRef(clipboardManager);
+            env->DeleteLocalRef(ContextClass);
+        }
+        vm->DetachCurrentThread();
+
+        return result;
+    }
+////==========================================================================================================//
+
+const char *GetAndroidID(JNIEnv *env, jobject context) {
+    jclass contextClass = env->FindClass(/*android/content/Context*/ StrEnc("`L+&0^[S+-:J^$,r9q92(as", "\x01\x22\x4F\x54\x5F\x37\x3F\x7C\x48\x42\x54\x3E\x3B\x4A\x58\x5D\x7A\x1E\x57\x46\x4D\x19\x07", 23).c_str());
+    jmethodID getContentResolverMethod = env->GetMethodID(contextClass, /*getContentResolver*/ StrEnc("E8X\\7r7ys_Q%JS+L+~", "\x22\x5D\x2C\x1F\x58\x1C\x43\x1C\x1D\x2B\x03\x40\x39\x3C\x47\x3A\x4E\x0C", 18).c_str(), /*()Landroid/content/ContentResolver;*/ StrEnc("8^QKmj< }5D:9q7f.BXkef]A*GYLNg}B!/L", "\x10\x77\x1D\x2A\x03\x0E\x4E\x4F\x14\x51\x6B\x59\x56\x1F\x43\x03\x40\x36\x77\x28\x0A\x08\x29\x24\x44\x33\x0B\x29\x3D\x08\x11\x34\x44\x5D\x77", 35).c_str());
+    jclass settingSecureClass = env->FindClass(/*android/provider/Settings$Secure*/ StrEnc("T1yw^BCF^af&dB_@Raf}\\FS,zT~L(3Z\"", "\x35\x5F\x1D\x05\x31\x2B\x27\x69\x2E\x13\x09\x50\x0D\x26\x3A\x32\x7D\x32\x03\x09\x28\x2F\x3D\x4B\x09\x70\x2D\x29\x4B\x46\x28\x47", 32).c_str());
+    jmethodID getStringMethod = env->GetStaticMethodID(settingSecureClass, /*getString*/ StrEnc("e<F*J5c0Y", "\x02\x59\x32\x79\x3E\x47\x0A\x5E\x3E", 9).c_str(), /*(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;*/ StrEnc("$6*%R*!XO\"m18o,0S!*`uI$IW)l_/_knSdlRiO1T`2sH|Ouy__^}%Y)JsQ:-\"(2_^-$i{?H", "\x0C\x7A\x4B\x4B\x36\x58\x4E\x31\x2B\x0D\x0E\x5E\x56\x1B\x49\x5E\x27\x0E\x69\x0F\x1B\x3D\x41\x27\x23\x7B\x09\x2C\x40\x33\x1D\x0B\x21\x5F\x20\x38\x08\x39\x50\x7B\x0C\x53\x1D\x2F\x53\x1C\x01\x0B\x36\x31\x39\x46\x0C\x15\x43\x2B\x05\x30\x15\x41\x43\x46\x55\x70\x0D\x59\x56\x00\x15\x58\x73", 71).c_str());
+
+    auto obj = env->CallObjectMethod(context, getContentResolverMethod);
+    auto str = (jstring) env->CallStaticObjectMethod(settingSecureClass, getStringMethod, obj, env->NewStringUTF(/*android_id*/ StrEnc("ujHO)8OfOE", "\x14\x04\x2C\x3D\x46\x51\x2B\x39\x26\x21", 10).c_str()));
+    return env->GetStringUTFChars(str, 0);
+}
+
+const char *GetDeviceModel(JNIEnv *env) {
+    jclass buildClass = env->FindClass(/*android/os/Build*/ StrEnc("m5I{GKGWBP-VOxkA", "\x0C\x5B\x2D\x09\x28\x22\x23\x78\x2D\x23\x02\x14\x3A\x11\x07\x25", 16).c_str());
+    jfieldID modelId = env->GetStaticFieldID(buildClass, /*MODEL*/ StrEnc("|}[q:", "\x31\x32\x1F\x34\x76", 5).c_str(), /*Ljava/lang/String;*/ StrEnc(".D:C:ETZ1O-Ib&^h.Y", "\x62\x2E\x5B\x35\x5B\x6A\x38\x3B\x5F\x28\x02\x1A\x16\x54\x37\x06\x49\x62", 18).c_str());
+
+    auto str = (jstring) env->GetStaticObjectField(buildClass, modelId);
+    return env->GetStringUTFChars(str, 0);
+}
+
+const char *GetDeviceBrand(JNIEnv *env) {
+    jclass buildClass = env->FindClass(/*android/os/Build*/ StrEnc("0iW=2^>0zTRB!B90", "\x51\x07\x33\x4F\x5D\x37\x5A\x1F\x15\x27\x7D\x00\x54\x2B\x55\x54", 16).c_str());
+    jfieldID modelId = env->GetStaticFieldID(buildClass, /*BRAND*/ StrEnc("@{[FP", "\x02\x29\x1A\x08\x14", 5).c_str(), /*Ljava/lang/String;*/ StrEnc(".D:C:ETZ1O-Ib&^h.Y", "\x62\x2E\x5B\x35\x5B\x6A\x38\x3B\x5F\x28\x02\x1A\x16\x54\x37\x06\x49\x62", 18).c_str());
+
+    auto str = (jstring) env->GetStaticObjectField(buildClass, modelId);
+    return env->GetStringUTFChars(str, 0);
+}
+
+const char *GetPackageName(JNIEnv *env, jobject context) {
+    jclass contextClass = env->FindClass(/*android/content/Context*/ StrEnc("`L+&0^[S+-:J^$,r9q92(as", "\x01\x22\x4F\x54\x5F\x37\x3F\x7C\x48\x42\x54\x3E\x3B\x4A\x58\x5D\x7A\x1E\x57\x46\x4D\x19\x07", 23).c_str());
+    jmethodID getPackageNameId = env->GetMethodID(contextClass, /*getPackageName*/ StrEnc("YN4DaP)!{wRGN}", "\x3E\x2B\x40\x14\x00\x33\x42\x40\x1C\x12\x1C\x26\x23\x18", 14).c_str(), /*()Ljava/lang/String;*/ StrEnc("VnpibEspM(b]<s#[9cQD", "\x7E\x47\x3C\x03\x03\x33\x12\x5F\x21\x49\x0C\x3A\x13\x20\x57\x29\x50\x0D\x36\x7F", 20).c_str());
+
+    auto str = (jstring) env->CallObjectMethod(context, getPackageNameId);
+    return env->GetStringUTFChars(str, 0);
+}
+
+const char *GetDeviceUniqueIdentifier(JNIEnv *env, const char *uuid) {
+    jclass uuidClass = env->FindClass(/*java/util/UUID*/ StrEnc("B/TxJ=3BZ_]SFx", "\x28\x4E\x22\x19\x65\x48\x47\x2B\x36\x70\x08\x06\x0F\x3C", 14).c_str());
+
+    auto len = strlen(uuid);
+
+    jbyteArray myJByteArray = env->NewByteArray(len);
+    env->SetByteArrayRegion(myJByteArray, 0, len, (jbyte *) uuid);
+
+    jmethodID nameUUIDFromBytesMethod = env->GetStaticMethodID(uuidClass, /*nameUUIDFromBytes*/ StrEnc("P6LV|'0#A+zQmoat,", "\x3E\x57\x21\x33\x29\x72\x79\x67\x07\x59\x15\x3C\x2F\x16\x15\x11\x5F", 17).c_str(), /*([B)Ljava/util/UUID;*/ StrEnc("sW[\"Q[W3,7@H.vT0) xB", "\x5B\x0C\x19\x0B\x1D\x31\x36\x45\x4D\x18\x35\x3C\x47\x1A\x7B\x65\x7C\x69\x3C\x79", 20).c_str());
+    jmethodID toStringMethod = env->GetMethodID(uuidClass, /*toString*/ StrEnc("2~5292eW", "\x46\x11\x66\x46\x4B\x5B\x0B\x30", 8).c_str(), /*()Ljava/lang/String;*/ StrEnc("P$BMc' #j?<:myTh_*h0", "\x78\x0D\x0E\x27\x02\x51\x41\x0C\x06\x5E\x52\x5D\x42\x2A\x20\x1A\x36\x44\x0F\x0B", 20).c_str());
+
+    auto obj = env->CallStaticObjectMethod(uuidClass, nameUUIDFromBytesMethod, myJByteArray);
+    auto str = (jstring) env->CallObjectMethod(obj, toStringMethod);
+    return env->GetStringUTFChars(str, 0);
+}
+
+struct MemoryStruct {
+    char *memory;
+    size_t size;
+};
+
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *) userp;
+
+    mem->memory = (char *) realloc(mem->memory, mem->size + realsize + 1);
+    if (mem->memory == NULL) {
+        return 0;
+    }
+
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+
+    return realsize;
+}
+
+////==========================================================================================================//
+
+    std::string Login(const char *userKey) {
+    if (!g_App)
+        return "Internal Error";
+
+    auto activity = g_App->activity;
+    if (!activity)
+        return "Internal Error";
+
+    auto vm = activity->vm;
+    if (!vm)
+        return "Internal Error";
+
+    auto object = activity->clazz;
+    if (!object)
+        return "Internal Error";
+
+    JNIEnv *env;
+    vm->AttachCurrentThread(&env, 0);
+    std::string hwid = userKey;
+    hwid += GetAndroidID(env, object);
+    hwid += GetDeviceModel(env);
+    hwid += GetDeviceBrand(env);
+    std::string UUID = GetDeviceUniqueIdentifier(env, hwid.c_str());
+    vm->DetachCurrentThread();
+    std::string errMsg;
+    
+
+    struct MemoryStruct chunk{};
+    chunk.memory = (char *) malloc(1);
+    chunk.size = 0;
+
+    CURL *curl;
+    CURLcode res;
+    curl = curl_easy_init();
+
+    //======LINKURL=====//
+       if (curl) {
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, /*POST*/ StrEnc(",IL=", "\x7C\x06\x1F\x69", 4).c_str());      		
+        std::string sRedLink = OBFUSCATE("https://api.kuropanel.tech/THUNDER/public/connect");
+		
+        curl_easy_setopt(curl, CURLOPT_URL, sRedLink.c_str());
+
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, StrEnc("!mLBO", "\x49\x19\x38\x32\x3C", 5).c_str());
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, StrEnc("@;Ls\\(KP4Qrop`b#d3094/r1cf<c<=H)AiiBG6i|Ta66s2[", "\x03\x54\x22\x07\x39\x46\x3F\x7D\x60\x28\x02\x0A\x4A\x40\x03\x53\x14\x5F\x59\x5A\x55\x5B\x1B\x5E\x0D\x49\x44\x4E\x4B\x4A\x3F\x04\x27\x06\x1B\x2F\x6A\x43\x1B\x10\x31\x0F\x55\x59\x17\x57\x3F", 47).c_str());
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  char data[4096];
+        sprintf(data, StrEnc("qu2yXK,YkJyGD@ut0.u~Nb'5(:.:chK", "\x16\x14\x5F\x1C\x65\x1B\x79\x1B\x2C\x6C\x0C\x34\x21\x32\x2A\x1F\x55\x57\x48\x5B\x3D\x44\x54\x50\x5A\x53\x4F\x56\x5E\x4D\x38", 31).c_str(), userKey, UUID.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        res = curl_easy_perform(curl);
+        if (res == CURLE_OK) {
+            try {
+                json result = json::parse(chunk.memory);
+                if (result[StrEnc("(>_LBm", "\x5B\x4A\x3E\x38\x37\x1E", 6).c_str()] == true) {
+                    std::string token = result[StrEnc("fAVA", "\x02\x20\x22\x20", 4).c_str()][/*token*/ StrEnc("{>3Lr", "\x0F\x51\x58\x29\x1C", 5).c_str()].get<std::string>();
+                    time_t rng = result[StrEnc("fAVA", "\x02\x20\x22\x20", 4).c_str()][/*rng*/ StrEnc("+n,", "\x59\x00\x4B", 3).c_str()].get<time_t>();
+                    if (rng + 30 > time(0)) {
+                        g_Token = "1";
+                        g_Auth = "1";
+                        bValid = g_Token == g_Auth;
+                        if (bValid) {
+                            pthread_t ptid;
+                        }
+                    }
+                } else {
+                    errMsg = result[StrEnc("LW(3(c", "\x3E\x32\x49\x40\x47\x0D", 6).c_str()].get<std::string>();
+                }
+            } catch (json::exception &e) {
+                errMsg = "{";
+                errMsg += e.what();
+                errMsg += "}\n{";
+                errMsg += chunk.memory;
+                errMsg += "}";
+            }
+        } else {
+            errMsg = curl_easy_strerror(res);
+        }
+    }
+    curl_easy_cleanup(curl);
+    vm->DetachCurrentThread();
+
+    return bValid ? "OK" : errMsg;
+}
+////==========================================================================================================//
+
+TNameEntryArray *GetGNames()
+{
+	return ((TNameEntryArray * (*)()) (UE4 + GNames_Offset))();
+}
+
+template <class T>
+void GetAllActors(std::vector<T *> &Actors)
+{
+	UGameplayStatics *gGameplayStatics = (UGameplayStatics *)gGameplayStatics->StaticClass();
+	auto GWorld = GetFullWorld();
+	if (GWorld)
+	{
+		TArray<AActor *> Actors2;
+		gGameplayStatics->GetAllActorsOfClass((UObject *)GWorld, T::StaticClass(), &Actors2);
+		for (int i = 0; i < Actors2.Num(); i++)
+		{
+			Actors.push_back((T *)Actors2[i]);
+		}
+	}
+}
+////==========================================================================================================//
+FVector GetBoneLocationByName(ASTExtraPlayerCharacter *Actor, const char *BoneName)
+{
+	return Actor->GetBonePos(BoneName, FVector());
+}
+ASTExtraPlayerCharacter *g_LocalPlayer=0;
+ASTExtraPlayerController *g_PlayerController =0;
+////==========================================================================================================//
+#define COLOR_WHITE          FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)
+#define COLOR_BLACK          FLinearColor(0.0f, 0.0f, 0.0f, 1.0f)
+#define COLOR_RED            FLinearColor(1.0f, 0.0f, 0.0f, 1.0f)
+#define COLOR_LIME           FLinearColor(0.0f, 1.0f, 0.0f, 1.0f)
+#define COLOR_BLUE           FLinearColor(0.0f, 0.0f, 1.0f, 1.0f)
+#define COLOR_YELLOW         FLinearColor(1.0f, 1.0f, 0.0f, 1.0f)
+#define COLOR_CYAN           FLinearColor(0.0f, 1.0f, 1.0f, 1.0f)
+#define COLOR_MAGENTA        FLinearColor(1.0f, 0.0f, 1.0f, 1.0f)
+#define COLOR_SILVER         FLinearColor(0.7529f, 0.7529f, 0.7529f, 1.0f)
+#define COLOR_GRAY           FLinearColor(0.502f, 0.502f, 0.502f, 1.0f)
+#define COLOR_MAROON         FLinearColor(0.502f, 0.0f, 0.0f, 1.0f)
+#define COLOR_OLIVE          FLinearColor(0.502f, 0.502f, 0.0f, 1.0f)
+#define COLOR_GREEN          FLinearColor(0.0f, 0.502f, 0.0f, 1.0f)
+#define COLOR_PURPLE         FLinearColor(0.502f, 0.0f, 0.502f, 1.0f)
+#define COLOR_TEAL           FLinearColor(0.0f, 0.502f, 0.502f, 1.0f)
+#define COLOR_NAVY           FLinearColor(0.0f, 0.0f, 0.502f, 1.0f)
+#define COLOR_DARKRED        FLinearColor(0.545f, 0.0f, 0.0f, 1.0f)
+#define COLOR_BROWN          FLinearColor(0.647f, 0.165f, 0.165f, 1.0f)
+#define COLOR_FIREBRICK      FLinearColor(0.698f, 0.133f, 0.133f, 1.0f)
+#define COLOR_CRIMSON        FLinearColor(0.863f, 0.078f, 0.235f, 1.0f)
+#define COLOR_TOMATO         FLinearColor(1.0f, 0.388f, 0.278f, 1.0f)
+#define COLOR_CORAL          FLinearColor(1.0f, 0.498f, 0.314f, 1.0f)
+#define COLOR_INDIANRED      FLinearColor(0.804f, 0.361f, 0.361f, 1.0f)
+#define COLOR_LIGHTCORAL     FLinearColor(0.941f, 0.502f, 0.502f, 1.0f)
+#define COLOR_DARKSALMON     FLinearColor(0.913f, 0.588f, 0.478f, 1.0f)
+#define COLOR_SALMON         FLinearColor(0.980f, 0.502f, 0.447f, 1.0f)
+#define COLOR_LIGHTSALMON    FLinearColor(1.0f, 0.627f, 0.478f, 1.0f)
+#define COLOR_ORANGERED      FLinearColor(1.0f, 0.271f, 0.0f, 1.0f)
+#define COLOR_DARKORANGE     FLinearColor(1.0f, 0.549f, 0.0f, 1.0f)
+#define COLOR_ORANGE         FLinearColor(1.0f, 0.647f, 0.0f, 1.0f)
+#define COLOR_GOLD           FLinearColor(1.0f, 0.843f, 0.0f, 1.0f)
+#define COLOR_DARKGOLDENROD  FLinearColor(0.722f, 0.525f, 0.043f, 1.0f)
+#define COLOR_GOLDENROD      FLinearColor(0.855f, 0.647f, 0.125f, 1.0f)
+#define COLOR_PALEGOLDENROD  FLinearColor(0.933f, 0.910f, 0.667f, 1.0f)
+#define COLOR_DARKKHAKI      FLinearColor(0.741f, 0.718f, 0.420f, 1.0f)
+#define COLOR_KHAKI          FLinearColor(0.941f, 0.902f, 0.549f, 1.0f)
+#define COLOR_YELLOWGREEN    FLinearColor(0.604f, 0.804f, 0.196f, 1.0f)
+#define COLOR_DARKOLIVEGREEN FLinearColor(0.333f, 0.420f, 0.184f, 1.0f)
+#define COLOR_OLIVEDRAB      FLinearColor(0.420f, 0.557f, 0.137f, 1.0f)
+#define COLOR_LAWNGREEN      FLinearColor(0.486f, 0.988f, 0.0f, 1.0f)
+#define COLOR_CHARTREUSE     FLinearColor(0.498f, 1.0f, 0.0f, 1.0f)
+#define COLOR_GREENYELLOW    FLinearColor(0.678f, 1.0f, 0.184f, 1.0f)
+#define COLOR_DARKGREEN      FLinearColor(0.0f, 0.392f, 0.0f, 1.0f)
+#define COLOR_FORESTGREEN    FLinearColor(0.133f, 0.545f, 0.133f, 1.0f)
+#define COLOR_LIMEGREEN      FLinearColor(0.196f, 0.804f, 0.196f, 1.0f)
+#define COLOR_LIGHTGREEN     FLinearColor(0.565f, 0.933f, 0.565f, 1.0f)
+#define COLOR_PALEGREEN      FLinearColor(0.596f, 0.984f, 0.596f, 1.0f)
+#define COLOR_MEDIUMSEAGREEN FLinearColor(0.235f, 0.702f, 0.443f, 1.0f)
+#define COLOR_SEAGREEN       FLinearColor(0.180f, 0.545f, 0.341f, 1.0f)
+#define COLOR_MEDIUMAQUAMARINE FLinearColor(0.400f, 0.804f, 0.667f, 1.0f)
+#define COLOR_MEDIUMSPRINGGREEN FLinearColor(0.0f, 0.980f, 0.604f, 1.0f)
+#define COLOR_SPRINGGREEN    FLinearColor(0.0f, 1.0f, 0.498f, 1.0f)
+#define COLOR_LIGHTSEAGREEN  FLinearColor(0.125f, 0.698f, 0.667f, 1.0f)
+#define COLOR_DARKSLATEGRAY  FLinearColor(0.184f, 0.310f, 0.310f, 1.0f)
+#define COLOR_AQUA           FLinearColor(0.0f, 1.0f, 1.0f, 1.0f)
+#define COLOR_LIGHTCYAN      FLinearColor(0.878f, 1.0f, 1.0f, 1.0f)
+#define COLOR_PALETURQUOISE  FLinearColor(0.686f, 0.933f, 0.933f, 1.0f)
+#define COLOR_AQUAMARINE     FLinearColor(0.498f, 1.0f, 0.831f, 1.0f)
+#define COLOR_TURQUOISE      FLinearColor(0.251f, 0.878f, 0.816f, 1.0f)
+#define COLOR_MEDIUMTURQUOISE FLinearColor(0.282f, 0.820f, 0.800f, 1.0f)
+#define COLOR_DARKTURQUOISE  FLinearColor(0.0f, 0.808f, 0.820f, 1.0f)
+#define COLOR_CADETBLUE      FLinearColor(0.373f, 0.620f, 0.627f, 1.0f)
+#define COLOR_STEELBLUE      FLinearColor(0.275f, 0.510f, 0.706f, 1.0f)
+#define COLOR_LIGHTSTEELBLUE FLinearColor(0.690f, 0.769f, 0.871f, 1.0f)
+#define COLOR_LIGHTBLUE      FLinearColor(0.678f, 0.847f, 0.902f, 1.0f)
+#define COLOR_SKYBLUE        FLinearColor(0.529f, 0.808f, 0.922f, 1.0f)
+#define COLOR_DEEPSKYBLUE    FLinearColor(0.0f, 0.749f, 1.0f, 1.0f)
+#define COLOR_DODGERBLUE     FLinearColor(0.118f, 0.565f, 1.0f, 1.0f)
+#define COLOR_CORNFLOWERBLUE FLinearColor(0.392f, 0.584f, 0.929f, 1.0f)
+#define COLOR_MEDIUMSLATEBLUE FLinearColor(0.482f, 0.408f, 0.933f, 1.0f)
+#define COLOR_ROYALBLUE      FLinearColor(0.255f, 0.412f, 0.882f, 1.0f)
+#define COLOR_LAVENDER       FLinearColor(0.902f, 0.902f, 0.980f, 1.0f)
+#define COLOR_THISTLE        FLinearColor(0.847f, 0.749f, 0.847f, 1.0f)
+#define COLOR_PLUM           FLinearColor(0.867f, 0.627f, 0.867f, 1.0f)
+#define COLOR_VIOLET         FLinearColor(0.933f, 0.510f, 0.933f, 1.0f)
+#define COLOR_ORCHID         FLinearColor(0.855f, 0.439f, 0.839f, 1.0f)
+#define COLOR_FUCHSIA        FLinearColor(1.0f, 0.0f, 1.0f, 1.0f)
+#define COLOR_MEDIUMORCHID   FLinearColor(0.729f, 0.333f, 0.827f, 1.0f)
+#define COLOR_MEDIUMPURPLE   FLinearColor(0.576f, 0.439f, 0.859f, 1.0f)
+#define COLOR_REBECCAPURPLE  FLinearColor(0.4f, 0.2f, 0.6f, 1.0f)
+#define COLOR_BLUEVIOLET     FLinearColor(0.541f, 0.169f, 0.886f, 1.0f)
+#define COLOR_DARKVIOLET     FLinearColor(0.580f, 0.0f, 0.827f, 1.0f)
+#define COLOR_DARKORCHID     FLinearColor(0.600f, 0.196f, 0.800f, 1.0f)
+#define COLOR_DARKMAGENTA    FLinearColor(0.545f, 0.0f, 0.545f, 1.0f)
+#define COLOR_DEEPPINK       FLinearColor(1.0f, 0.078f, 0.576f, 1.0f)
+#define COLOR_HOTPINK        FLinearColor(1.0f, 0.412f, 0.706f, 1.0f)
+#define COLOR_LIGHTPINK      FLinearColor(1.0f, 0.714f, 0.757f, 1.0f)
+#define 白色 FLinearColor(1.f, 1.f, 1.f, 1.f)
+#define Black FLinearColor(0, 0, 0, 1.f)
+#define White FLinearColor(1.f, 1.f, 1.f, 1.f)
+#define Red   FLinearColor(1.f, 0, 0, 1.f)
+#define Gray  FLinearColor(0, 1.f, 0, 1.f)
+#define Blue  FLinearColor(0, 0, 1.f, 1.f)
+#define Pink   FLinearColor(1.f, 0.5f, 1.f, 1.f)
+#define Red FLinearColor(1.f, 0, 0, 0.7f)
+#define Green FLinearColor(0, 0.5f, 0, 1.f)
+#define Orange FLinearColor(1.f, 0.4f, 0, 1.f)
+#define Purple FLinearColor(0.67f, 0.57f, 0.81f, 1.0f)
+#define Yellow FLinearColor(1.f, 1.f, 0, 1.f)
+ #define 黑色 FLinearColor(0, 0, 0, 1.f)
+
+////==========================================================================================================//
+int (*orig_onInputEvent)(struct android_app *app, AInputEvent *inputEvent);
+int onInputEvent(struct android_app *app, AInputEvent *inputEvent) {
+	THUNDER_GUI::onEvent(inputEvent, {(float)(screenSizeX) / (float)screenWidth,(float)(screenSizeY) / (float)screenHeight});
+    return orig_onInputEvent(app, inputEvent);
+}
+////==========================================================================================================//
+
+
+SDK::FVector SubtractVectors(SDK::FVector a, SDK::FVector b) {
+    SDK::FVector result;
+    result.X = a.X - b.X;
+    result.Y = a.Y - b.Y;
+    result.Z = a.Z - b.Z;
+    return result;
+}
+
+
+SDK::FVector AddVectors(SDK::FVector a, SDK::FVector b) {
+    SDK::FVector result;
+    result.X = a.X + b.X;
+    result.Y = a.Y + b.Y;
+    result.Z = a.Z + b.Z;
+    return result;
+}
+
+
+SDK::FVector MultiplyVectors(SDK::FVector a, SDK::FVector b) {
+    SDK::FVector result;
+    result.X = a.X * b.X;
+    result.Y = a.Y * b.Y;
+    result.Z = a.Z * b.Z;
+    return result;
+}
+
+
+SDK::FVector DivideVectors(SDK::FVector a, SDK::FVector b) {
+    SDK::FVector result;
+    result.X = a.X / b.X;
+    result.Y = a.Y / b.Y;
+    result.Z = a.Z / b.Z;
+    return result;
+}
+
+
+SDK::FVector MultiplyVectorFloat(SDK::FVector a, float scalar) {
+    SDK::FVector result;
+    result.X = a.X * scalar;
+    result.Y = a.Y * scalar;
+    result.Z = a.Z * scalar;
+    return result;
+}
+
+
+FRotator ToRotator2(FVector local, FVector target) {
+    FVector Lund = SubtractVectors(target, local);
+    FRotator newViewAngle;
+    newViewAngle.Pitch =
+            -std::atan2(Lund.Z, std::sqrt(Lund.X * Lund.X + Lund.Y * Lund.Y)) * (180.f / M_PI);
+    newViewAngle.Yaw = std::atan2(Lund.Y, Lund.X) * (180.f / M_PI);
+    newViewAngle.Roll = 0.f;
+    if (newViewAngle.Yaw < 0.f) {
+        newViewAngle.Yaw += 360.f;
+    }
+    return newViewAngle;
+}
+
+void VectorAnglesRadar(Vector3 &forward, FVector &angles) {
+    if (forward.X == 0.f && forward.Y == 0.f) {
+        angles.X = forward.Z > 0.f ? -360.f : 360.f;
+        angles.Y = 0.f;
+    } else {
+        angles.X = RAD2DEG(atan2(-forward.Z, forward.Magnitude(forward)));
+        angles.Y = RAD2DEG(atan2(forward.Y, forward.X));
+    }
+    angles.Z = 360.f;
+}
+
+
+
+FRotator ToRotator(FVector local, FVector target) {
+FVector rotation = UKismetMathLibrary::Subtract_VectorVector(local, target);
+
+float hyp = sqrt(rotation.X * rotation.X + rotation.Y * rotation.Y);
+
+FRotator newViewAngle = {0};
+newViewAngle.Pitch = -atan(rotation.Z / hyp) * (180.f / (float) 3.14159265358979323846);
+newViewAngle.Yaw = atan(rotation.Y / rotation.X) * (180.f / (float) 3.14159265358979323846);
+newViewAngle.Roll = (float) 0.f;
+
+if (rotation.X >= 0.f)
+newViewAngle.Yaw += 180.0f;
+
+return newViewAngle;
+}
+void AimAngle(FRotator &angles) {
+    if (angles.Pitch > 180)
+        angles.Pitch -= 360;
+    if (angles.Pitch < -180)
+        angles.Pitch += 360;
+
+    if (angles.Pitch < -75.f)
+        angles.Pitch = -75.f;
+    else if (angles.Pitch > 75.f)
+        angles.Pitch = 75.f;
+
+    while (angles.Yaw < -180.0f)
+        angles.Yaw += 360.0f;
+    while (angles.Yaw > 180.0f)
+        angles.Yaw -= 360.0f;
+}
+
+bool W2S2(FVector worldPos, FVector2D *screenPos) {
+return g_PlayerController->ProjectWorldLocationToScreen(worldPos, true, screenPos);
+}
+////==========================================================================================================//
+void *LoadFont(void *)
+{
+	while (!tslFontUI || !robotoTinyFont)
+	{
+		tslFontUI = UObject::FindObject<UFont>("Font Roboto.Roboto");
+		robotoTinyFont = UObject::FindObject<UFont>("Font RobotoDistanceField.RobotoDistanceField");
+		sleep(1);
+	}
+	return 0;
+}
+////==========================================================================================================//
+void NekoHook(FRotator &angles) {
+    if (angles.Pitch > 180)
+        angles.Pitch -= 360;
+    if (angles.Pitch < -180)
+        angles.Pitch += 360;
+
+    if (angles.Pitch < -75.f)
+        angles.Pitch = -75.f;
+    else if (angles.Pitch > 75.f)
+        angles.Pitch = 75.f;
+
+    while (angles.Yaw < -180.0f)
+        angles.Yaw += 360.0f;
+    while (angles.Yaw > 180.0f)
+        angles.Yaw -= 360.0f;
+}
+void NekoHook(float *angles) {
+    if (angles[0] > 180)
+        angles[0] -= 360;
+    if (angles[0] < -180)
+        angles[0] += 360;
+
+    if (angles[0] < -75.f)
+        angles[0] = -75.f;
+    else if (angles[0] > 75.f)
+        angles[0] = 75.f;
+
+    while (angles[1] < -180.0f)
+        angles[1] += 360.0f;
+    while (angles[1] > 180.0f)
+        angles[1] -= 360.0f;
+}
+
+void NekoHook(FVector2D angles) {
+    if (angles.X > 180)
+        angles.X -= 360;
+    if (angles.X < -180)
+        angles.X += 360;
+
+    if (angles.X < -75.f)
+        angles.X = -75.f;
+    else if (angles.X > 75.f)
+        angles.X = 75.f;
+
+    while (angles.Y < -180.0f)
+        angles.Y += 360.0f;
+    while (angles.Y > 180.0f)
+        angles.Y -= 360.0f;
+}
+////==========================================================================================================//
+#define W2S(w, s) UGameplayStatics::ProjectWorldToScreen(g_PlayerController, w, true, s)
+
+bool isInsideFOV(int x, int y) {
+    int circle_x = screenWidth / 2;
+    int circle_y = screenHeight / 2;
+    int rad = (int) FOVsize;
+    return (x - circle_x) * (x - circle_x) + (y - circle_y) * (y - circle_y) <= rad * rad;
+}
+
+auto GetTargetForAim()
+{
+    ASTExtraPlayerCharacter *result = 0;
+	float max = std::numeric_limits<float>::infinity();
+	auto Actors = getActors();
+	
+	auto localPlayer = g_LocalPlayer;
+    auto localPlayerController = g_PlayerController;
+    
+	if (localPlayer)
+	{
+		for (auto Actor : Actors)
+		{
+			if (isObjectInvalid(Actor))
+				continue;
+			if (Actor->IsA(ASTExtraPlayerCharacter::StaticClass()))
+			{
+				auto Player = (ASTExtraPlayerCharacter *)Actor;
+                
+                float dist = localPlayer->GetDistanceTo(Player) / 100.0f;    
+                   if (dist > Range)
+                    continue;
+                    
+                if (Player->PlayerKey == localPlayer->PlayerKey)
+                    continue;
+
+                if (Player->TeamID == localPlayer->TeamID)
+                    continue;
+
+                if (Player->bDead)
+                    continue;
+
+                if (AimBot[2] ) {
+                if (Player->Health == 0.0f)
+                continue;
+                }
+                                                  
+                if (AimBot[3]) {
+                if (Player->bEnsure)
+                continue;
+                }
+                        
+                        if (AimBot[4]) {
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("Head", {0, 0, 0}), false))//头
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("neck_01", {0, 0, 0}), false))//Neck
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("upperarm_r", {0, 0, 0}), false))//上面的肩膀右
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("upperarm_l", {0, 0, 0}), false))//上面的肩膀左
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("lowerarm_r", {0, 0, 0}), false))//上面的手臂右
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("lowerarm_l", {0, 0, 0}), false))//上面的手臂左
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("spine_03", {0, 0, 0}), false))//脊柱3
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("spine_02", {0, 0, 0}), false))//脊柱2
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("spine_01", {0, 0, 0}), false))//脊柱2
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("pelvis", {0, 0, 0}), false))//骨盆
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("thigh_l", {0, 0, 0}), false))//大腿左
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("thigh_r", {0, 0, 0}), false))//大腿右
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("calf_l", {0, 0, 0}), false))//小腿左
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("calf_r", {0, 0, 0}), false))//小腿右
+                continue;
+
+                static bool isSelected = false;
+                algorithm = 0;
+                isSelected = false;
+                 
+
+                
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("Head", {0, 0, 0}),  false)) {//头
+                 isHead = false;
+                }else{
+                 isHead = true;
+                }
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("pelvis", {0, 0, 0}),  false))
+                {//骨盆
+                 isPelvis = false;
+                }else{
+                 isPelvis = true;
+                }
+                                               
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("neck_01", {0, 0, 0}),  false))
+                {//Neck
+                 isNeck = false;
+                }else{
+                 isNeck = true;
+                }
+                                                
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("hand_l", {0, 0, 0}),  false))
+                {//左手
+                 isLeftHand = false;
+                }else{
+                 isLeftHand = true;
+                }
+                                                
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("hand_r", {0, 0, 0}),  false))
+                {//右手
+                 isRightHand = false;
+                }else{
+                 isRightHand = true;
+                }
+                        
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("foot_l", {0, 0, 0}),  false))
+                {//左脚
+                 isLeftFoot = false;
+                }else{
+                 isLeftFoot = true;
+                }
+                     
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("foot_r", {0, 0, 0}),  false))
+                {//右脚
+                 isRightFoot = false;
+                }else{
+                 isRightFoot = true;
+                }
+                        
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("calf_l", {0, 0, 0}),  false))
+                {//左小腿
+                 isLeftCalf = false;
+                }else{
+                 isLeftCalf = true;
+                }
+                        
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("calf_r", {0, 0, 0}),  false))
+                {//右小腿
+                 isRightCalf = false;
+                }else{
+                 isRightCalf = true;
+                }
+                        
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("lowerarm_l", {0, 0, 0}),  false))
+                {//左小臂
+                 isLeftLowerArm = false;
+                }else{
+                 isLeftLowerArm = true;
+                }
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("lowerarm_r", {0, 0, 0}),  false))
+                {//右小臂
+                 isRightLowerArm = false;
+                }else{
+                 isRightLowerArm = true;
+                }
+                        
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("thigh_l", {0, 0, 0}),  false))
+                {//左上臂
+                 isLeftThigh = false;
+                }else{
+                 isLeftThigh = true;
+                }
+                if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager, Player->GetBonePos("thigh_r", {0, 0, 0}),  false))
+                {//左上臂
+                 isRightThigh = false;
+                }else{
+                 isRightThigh = true;
+                }
+                                                                                                
+                if (!isSelected)
+                if(isHead)
+                {
+                  algorithm = 1;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isPelvis)
+                {
+                  algorithm = 2;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isLeftCalf)
+                {
+                  algorithm = 3;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isRightCalf)
+                {
+                  algorithm = 4;   
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isLeftLowerArm)
+                {
+                  algorithm = 5;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isRightLowerArm)
+                {
+                  algorithm = 6;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isLeftUpperArm)
+                {
+                  algorithm = 7;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isRightUpperArm)
+                {
+                  algorithm = 8;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isLeftThigh)
+                {
+                  algorithm = 9;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isRightThigh)
+                {
+                  algorithm = 10;
+                  isSelected = true;
+                 }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isLeftFoot)
+                {
+                  algorithm = 11;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                if (!isSelected)
+                if(isRightFoot)
+                {
+                  algorithm = 12;
+                  isSelected = true;
+                }else{
+                  isSelected = false;
+                }
+                }
+
+                if (trackingType == 0) {
+                   float dist = localPlayer->GetDistanceTo(Player);
+                   if (dist < max) {
+                      max = dist;
+                      result = Player;
+                    }
+                }
+                
+                if (trackingType == 1) {
+                   auto Root = Player->GetBonePos("Root", {});
+                   auto Head = Player->GetBonePos("Head", {});
+
+                    FVector2D RootSc, HeadSc;
+                     if (W2S(Root, &RootSc) && W2S(Head, &HeadSc))
+                      {
+                         float height = abs(HeadSc.Y - RootSc.Y);
+                         float width = height * 0.65f;
+                        FVector middlePoint = {HeadSc.X + (width / 2), HeadSc.Y + (height / 2),0};
+                        if ((middlePoint.X >= 0 && middlePoint.X <= screenWidth) && (middlePoint.Y >= 0 && middlePoint.Y <= screenHeight))
+                        {
+                        FVector2D v2Middle = FVector2D((float)(screenWidth / 2), (float)(screenHeight / 2));
+                        FVector2D v2Loc = FVector2D(middlePoint.X, middlePoint.Y);
+                        if(isInsideFOV((int)middlePoint.X, (int)middlePoint.Y)) {
+                           float dist = FVector2D::Distance(v2Middle, v2Loc);
+                           if (dist < max) {
+                                max = dist;
+                                result = Player;
+                               }                           
+                            }
+                        }
+                    }
+                }                
+            }
+        }
+    }    
+    return result;
+};
+
+
+////==========================================================================================================//
+
+class FPSCounter {
+protected:
+    unsigned int m_fps;
+    unsigned int m_fpscount;
+    long m_fpsinterval;
+
+public:
+    FPSCounter() : m_fps(0), m_fpscount(0), m_fpsinterval(0) {
+    }
+
+    void update() {
+        m_fpscount++;
+
+        if (m_fpsinterval < time(0)) {
+            m_fps = m_fpscount;
+
+            m_fpscount = 0;
+            m_fpsinterval = time(0) + 1;
+        }
+    }
+
+    unsigned int get() const {
+        return m_fps;
+    }
+};
+
+FPSCounter fps;
+
+
+
+/*std::string getDayName() {
+    time_t now = time(0);
+    struct tm* timeinfo = localtime(&now);
+    const char* weekday[] = { "Sunday,", "Monday,", "Tuesday,", "Wednesday,", "Thursday,", "Friday,", "Saturday," };
+    return weekday[timeinfo->tm_wday];
+}
+
+// Function to get AM/PM
+std::string getAMPM() {
+    time_t now = time(0);
+    struct tm* timeinfo = localtime(&now);
+    return (timeinfo->tm_hour < 12) ? "AM IST" : "PM IST";
+}*/
+
+
+
+
+float Random[11] = {0.9f, 1.0f, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f, 1.7f, 1.9f, 2.0f};
+void (*ThunderBulletInner)(uintptr_t Weapon, FVector StartLoc, FRotator StartRot, int ShootID);
+void xThunderBulletInner(uintptr_t Weapon, FVector StartLoc, FRotator StartRot, int ShootID)
+{
+    if(Bullet[1] ){
+    auto Target = GetTargetForAim();
+    if (Target != 0)
+    {
+        FVector targetAimPos = Target->GetBonePos("neck_01", {});
+        if (auto WeaponManagerComponent = g_LocalPlayer->WeaponManagerComponent)
+        {
+            if (auto CurrentWeaponReplicated = (ASTExtraShootWeapon*)WeaponManagerComponent->CurrentWeaponReplicated)
+            {
+
+                float distance = g_LocalPlayer->GetDistanceTo(Target);
+                float BulletFireSpeed = CurrentWeaponReplicated->GetBulletFireSpeedFromEntity();
+                float timeToTravel = distance / BulletFireSpeed;
+                auto CurrentVehicle = Target->CurrentVehicle;
+
+                if (CurrentVehicle)
+                {
+                    FVector LinearVelocity = CurrentVehicle->ReplicatedMovement.LinearVelocity;
+                    FVector Velocity = LinearVelocity * timeToTravel;
+                    targetAimPos = targetAimPos + Velocity;
+                }
+                else
+                {
+                    FVector LinearVelocity = Target->GetVelocity();
+                    FVector Velocity = LinearVelocity * timeToTravel;
+                    targetAimPos = targetAimPos + Velocity;
+                }
+                static int index = 0;
+                index = GetIndex(index, 11);
+                float Smoothing = Random[index];
+                FRotator gunrotaton = StartRot;
+                FRotator aimrotation = ToRotator(StartLoc, targetAimPos);
+                aimrotation.Pitch -= gunrotaton.Pitch;
+                aimrotation.Yaw -= gunrotaton.Yaw;
+                aimrotation.Roll = 0.0f;
+                clampAngles(aimrotation);
+                gunrotaton.Pitch += aimrotation.Pitch / Smoothing;
+                gunrotaton.Yaw += aimrotation.Yaw / Smoothing;
+                gunrotaton.Roll = 0.0f;
+                return ThunderBulletInner(Weapon, StartLoc, gunrotaton, ShootID);
+            }
+        }
+    }
+}
+    return ThunderBulletInner(Weapon, StartLoc, StartRot, ShootID);
+}
+
+
+
+////==========================================================================================================//
+void RenderESP(UCanvas* Canvas, int ScreenWidth, int ScreenHeight)
+{
+	
+std::string datePart; // Declare outside so it's accessible
+/*if (Expiry) {
+std::string dayName = getDayName();
+std::string ampm = getAMPM();
+datePart = dayName + " " + EXP + " " + ampm;
+tslFontUI->LegacyFontSize = 14;
+DrawText(Canvas, FString(datePart.c_str()), { (float)screenWidth /10 + screenWidth/25.2f, 680 }, COLOR_YELLOW, COLOR_YELLOW,true);
+}*/
+
+std::string Version = "Bgmi 3.8";
+tslFontUI->LegacyFontSize = 15;
+DrawText(Canvas, FString(Version.c_str()), { (float)screenWidth /10 + screenWidth/1.3f, 680 }, COLOR_CYAN, COLOR_BLACK,true);
+
+
+if (Canvas2) {
+std::string Aimbot = "Thunder Aimbot";
+tslFontUI->LegacyFontSize = 19;
+DrawText(Canvas, FString(Aimbot.c_str()), { (float)screenWidth /10 + screenWidth/1.3f, 650 }, COLOR_GREEN, COLOR_BLACK,true);
+}
+
+if (Canvas1) {
+std::string Esp = "Thunder Esp ";
+tslFontUI->LegacyFontSize = 19;
+DrawText(Canvas, FString(Esp.c_str()), { (float)screenWidth /10 + screenWidth/1.3f, 650 }, COLOR_RED, COLOR_BLACK,true);
+}
+	
+
+
+	ASTExtraPlayerCharacter *localPlayer = 0;
+	ASTExtraPlayerController *localPlayerController = 0;
+	
+	screenSizeX = ANativeWindow_getWidth(g_App->window);
+    screenSizeY = ANativeWindow_getHeight(g_App->window);
+    
+	screenWidth = ScreenWidth;
+    screenHeight = ScreenHeight;
+
+
+    		auto Actors = getActors();
+    		UGameplayStatics *gGameplayStatics = (UGameplayStatics *)UGameplayStatics::StaticClass();
+    		auto GWorld = GetFullWorld();
+    		if (GWorld)
+    		{
+    			UNetDriver *NetDriver = GWorld->NetDriver;
+    			if (NetDriver)
+    			{
+    				UNetConnection *ServerConnection = NetDriver->ServerConnection;
+    			if (ServerConnection)
+    			{
+    				localPlayerController = (ASTExtraPlayerController *)ServerConnection->PlayerController;
+    			}
+    		}
+		
+    	    if (localPlayerController) {
+    			std::vector<ASTExtraPlayerCharacter *> PlayerCharacter;				
+    			GetAllActors(PlayerCharacter);
+    		for (auto actor = PlayerCharacter.begin();
+    			actor != PlayerCharacter.end(); actor++) {
+    		     auto Actor = *actor;
+    		if (Actor->PlayerKey ==((ASTExtraPlayerController *) localPlayerController)->PlayerKey) {
+    			 localPlayer = Actor;
+        	   	 break;
+        		}
+    	    }
+
+            if (localPlayer) {
+               if (localPlayer->PartHitComponent) {
+auto ConfigCollisionDistSqAngles = localPlayer->PartHitComponent->ConfigCollisionDistSqAngles;
+for (int j = 0; j < ConfigCollisionDistSqAngles.Num(); j++) {
+ConfigCollisionDistSqAngles[j].Angle = 90.0f;
+}
+localPlayer->PartHitComponent->ConfigCollisionDistSqAngles = ConfigCollisionDistSqAngles;
+}
+////==========================================================================================================//            
+        
+
+                if (AimBot[1]) {
+			    ASTExtraPlayerCharacter *Target = GetTargetForAim();
+				if (Target)
+				{
+                   bool triggerOk = false;
+                if (scopeAndFire == 0) {
+                   triggerOk = localPlayer->bIsWeaponFiring;
+                 } else if (scopeAndFire == 1) {
+                    triggerOk = localPlayer->bIsWeaponFiring || localPlayer->bIsGunADS;
+                  } else triggerOk = true;
+		      	if (triggerOk){
+                       FVector targetAimPos;
+                     if (AimHead) {
+                       if(algorithm == 0) {
+                        targetAimPos=Target->GetBonePos("Head", {});
+                       } else if(algorithm == 1) {
+                        targetAimPos = Target->GetBonePos("Head", {});
+                       }else if(algorithm == 2){
+                        targetAimPos = Target->GetBonePos("pelvis", {});//锁骨
+                       }else if(algorithm == 3){
+                        targetAimPos = Target->GetBonePos("calf_l", {});//左小腿
+                       }else if(algorithm == 4){
+                        targetAimPos = Target->GetBonePos("calf_r", {});//右小腿
+                       }else if(algorithm == 5){
+                        targetAimPos = Target->GetBonePos("lowerarm_l", {});//左小臂
+                       }else if(algorithm == 6){
+                        targetAimPos = Target->GetBonePos("lowerarm_r", {});//右小臂
+                       }else if(algorithm == 7){
+                        targetAimPos = Target->GetBonePos("upperarm_l", {});//左上臂
+                       }else if(algorithm == 8){
+                        targetAimPos = Target->GetBonePos("upperarm_r", {});//右上臂
+                       }else if(algorithm == 9) {
+                        targetAimPos = Target->GetBonePos("thigh_l", {});//左大腿
+                       }else if(algorithm == 10) {
+                        targetAimPos = Target->GetBonePos("thigh_r", {});//右大腿
+                       }else if(algorithm == 11) {
+                        targetAimPos = Target->GetBonePos("foot_l", {});//左脚
+                       }else if(algorithm == 12){
+                        targetAimPos = Target->GetBonePos("foot_r", {});//右脚
+                       }
+                     }
+                     if(AimBody){
+                       if(algorithm == 0) {
+                        targetAimPos = Target->GetBonePos("Head", {});//头
+                       }else if(algorithm == 1) {
+                        targetAimPos = Target->GetBonePos("spine_03", {});//Neck
+                       }else if(algorithm == 2){
+                        targetAimPos = Target->GetBonePos("pelvis", {});//屁股
+                       }else if(algorithm == 3){
+                        targetAimPos = Target->GetBonePos("calf_l", {});//左小腿
+                       }else if(algorithm == 4){
+                        targetAimPos = Target->GetBonePos("calf_r", {});//右小腿
+                       }else if(algorithm == 5){
+                        targetAimPos = Target->GetBonePos("lowerarm_l", {});//左小臂
+                       }else if(algorithm == 6){
+                        targetAimPos = Target->GetBonePos("lowerarm_r", {});//右小臂
+                       }else if(algorithm == 7){
+                        targetAimPos = Target->GetBonePos("upperarm_l", {});//左上臂
+                       }else if(algorithm == 8){
+                        targetAimPos = Target->GetBonePos("upperarm_r", {});//右上臂
+                       }else if(algorithm == 9) {
+                        targetAimPos = Target->GetBonePos("thigh_l", {});//左大腿
+                       }else if(algorithm == 10) {
+                        targetAimPos = Target->GetBonePos("thigh_r", {});//右大腿
+                       }else if(algorithm == 11) {
+                        targetAimPos = Target->GetBonePos("foot_l", {});//左脚
+                       }else if(algorithm == 12){
+                        targetAimPos = Target->GetBonePos("foot_r", {});//右脚
+                        }
+                     }
+			         auto WeaponManagerComponent = localPlayer->WeaponManagerComponent;
+                     if (WeaponManagerComponent)
+                     {
+                        auto propSlot = WeaponManagerComponent->GetCurrentUsingPropSlot();
+                        if ((int)propSlot.GetValue() >= 1 && (int)propSlot.GetValue() <= 3)
+                        {
+                          auto CurrentWeaponReplicated = (ASTExtraShootWeapon *)WeaponManagerComponent->CurrentWeaponReplicated;
+                          if (CurrentWeaponReplicated)
+                          {
+                                auto ShootWeaponComponent = CurrentWeaponReplicated->ShootWeaponComponent;
+                              if (ShootWeaponComponent)
+                              {
+                                UShootWeaponEntity *ShootWeaponEntityComponent = ShootWeaponComponent->ShootWeaponEntityComponent;
+                              if (ShootWeaponEntityComponent)
+                              {
+                                 ASTExtraVehicleBase *CurrentVehicle = Target->CurrentVehicle;
+                                 float dist = localPlayer->GetDistanceTo(Target);
+                                 auto timeToTravel = dist / ShootWeaponEntityComponent->BulletRange;
+                              if (CurrentVehicle)
+                              {
+                                 FVector LinearVelocity = CurrentVehicle->ReplicatedMovement.LinearVelocity;
+                                 targetAimPos = UKismetMathLibrary::Add_VectorVector(targetAimPos, UKismetMathLibrary::Multiply_VectorFloat(LinearVelocity, timeToTravel));
+                               }else{
+                                 FVector Velocity = Target->GetVelocity();
+                                 targetAimPos = UKismetMathLibrary::Add_VectorVector(targetAimPos, UKismetMathLibrary::Multiply_VectorFloat(Velocity, timeToTravel));
+                               }
+                            
+                               if (localPlayer->bIsWeaponFiring)
+                               {
+                                 float dist = localPlayer->GetDistanceTo(Target) / 100.f;
+                                 targetAimPos.Z -= dist * recoilCompensationFactor;
+                                }
+                            
+                                     FVector fDir = UKismetMathLibrary::Subtract_VectorVector(targetAimPos, g_PlayerController->PlayerCameraManager->CameraCache.POV.Location);
+                                     FRotator Yaptr = UKismetMathLibrary::Conv_VectorToRotator(fDir);
+                                
+                                     FRotator CpYaT = g_PlayerController->PlayerCameraManager->CameraCache.POV.Rotation;
+                                
+                                     Yaptr.Pitch -= CpYaT.Pitch;
+                                     Yaptr.Yaw -= CpYaT.Yaw;
+                                     Yaptr.Roll = 0.f;
+                                     NekoHook(Yaptr);
+                                
+                                     CpYaT.Pitch += Yaptr.Pitch / Speed_Aim; // Aim X Speed Make Float : Xs
+                                     CpYaT.Yaw += Yaptr.Yaw / Speed_Aim; // Aim Y Speed Make Float : Ys
+                                     CpYaT.Roll = 0.f;
+                                
+                                      g_PlayerController->SetControlRotation(CpYaT, "");
+                                      }
+                                   }
+                                }
+                             }
+                          }
+                      }
+                   }
+               }
+	
+
+			   if (Bullet[6]){
+uintptr_t Mesh = *(uintptr_t *)((uintptr_t)localPlayer + 0x498);
+if (Mesh != 0)
+{
+    uintptr_t Skeletal = *(uintptr_t *)(Mesh + 0x868);
+    if (Skeletal != 0)
+    {
+        uintptr_t Asset = *(uintptr_t *)(Skeletal + 0x138);
+        if (Asset != 0)
+        {
+            uintptr_t ArraySkeletal = *(uintptr_t *)(Asset + 0x38);
+            if (ArraySkeletal != 0)
+            {
+                uintptr_t SkeletalBodySetup = *(uintptr_t *)(ArraySkeletal + sizeof(uintptr_t) * 14);
+
+                if (SkeletalBodySetup != 0)
+                {
+                    uintptr_t BoxElems = *(uintptr_t *)(SkeletalBodySetup + 0x38);
+                    if (BoxElems != 0)
+                    {
+                        *(float *)(BoxElems + 0x88) = 90.0f;
+                        *(float *)(BoxElems + 0x8c) = 90.0f;
+                        *(float *)(BoxElems + 0x90) = 100.0f;
+                    }
+                    }
+                    }
+                    }
+                    }
+                    }
+                    }
+
+////==========================================================================================================//               
+               
+            	int totalEnemies = 0, totalBots = 0;
+            	std::vector<ASTExtraPlayerCharacter *> PlayerCharacter;
+                GetAllActors(PlayerCharacter);
+			    for (auto actor = PlayerCharacter.begin(); actor != PlayerCharacter.end(); actor++)
+			    {
+
+                auto Player = *actor;
+                if (Player->PlayerKey == localPlayer->PlayerKey)
+                	continue;
+                if (Player->TeamID == localPlayer->TeamID)
+                	continue;
+                if (Player->bDead)
+                	continue;
+                if (Player->bHidden)
+                	continue;
+                                                                
+                if (!Player->RootComponent)
+                	continue;
+                                        
+                 if (ESP[1]) {
+                if (Player->bEnsure)
+                      continue;
+                 }
+                	
+                if (Player->bEnsure)
+                 totalBots++;
+                 else totalEnemies++;
+                        
+             //   float Distance = localPlayer->GetDistanceTo(Player) / 100.0f;
+             //   if (Distance > 500)
+             float Distance = localPlayer->GetDistanceTo(Player) / 100.0f;
+                if (Distance > 绘制距离)
+             continue;            
+                                                
+                FVector HeadPos = GetBoneLocationByName(Player,"Head");
+                FVector2D HeadPosSC;
+                FVector RootPos = GetBoneLocationByName(Player,"Root");
+                FVector2D RootPosSC;
+                FVector Root = GetBoneLocationByName(Player,"Root");
+                FVector Spin = GetBoneLocationByName(Player,"pelvis");
+                FVector Spin2 = GetBoneLocationByName(Player,"spine_03");
+                FVector pelvis = GetBoneLocationByName(Player,"pelvis");
+                FVector2D pelvisPoSC;
+                FVector upper_r = GetBoneLocationByName(Player,"upperarm_r");
+                FVector2D upper_rPoSC;
+                FVector lowerarm_r = GetBoneLocationByName(Player,"lowerarm_r");
+                FVector2D lowerarm_rPoSC;
+                FVector lowerarm_l = GetBoneLocationByName(Player,"lowerarm_l");
+                FVector2D lowerarm_lSC;
+                FVector hand_r = GetBoneLocationByName(Player,"hand_r");
+                FVector2D hand_rPoSC;
+                FVector upper_l = GetBoneLocationByName(Player,"upperarm_l");
+                FVector2D upper_lPoSC;
+                FVector hand_l = GetBoneLocationByName(Player,"hand_l");
+                FVector2D hand_lPoSC;
+                FVector thigh_l = GetBoneLocationByName(Player,"thigh_l");
+                FVector2D thigh_lPoSC;
+                FVector calf_l = GetBoneLocationByName(Player,"calf_l");
+                FVector2D calf_lPoSC;
+                FVector foot_l = GetBoneLocationByName(Player,"foot_l");
+                FVector2D foot_lPoSC;
+                FVector thigh_r = GetBoneLocationByName(Player,"thigh_r");
+                FVector2D thigh_rPoSC;
+                FVector calf_r = GetBoneLocationByName(Player,"calf_r");
+                FVector2D calf_rPoSC;
+                FVector foot_r = GetBoneLocationByName(Player,"foot_r");
+                FVector2D foot_rPoSC;
+                FVector neck_01 = GetBoneLocationByName(Player,"neck_01");
+                FVector2D neck_01PoSC;
+                FVector spine_01 = GetBoneLocationByName(Player,"spine_01");
+                FVector2D spine_01PoSC;
+                FVector spine_02 = GetBoneLocationByName(Player,"spine_02");
+                FVector2D spine_02PoSC;
+                FVector spine_03 = GetBoneLocationByName(Player,"spine_03");
+                FVector2D spine_03PoSC;               
+////==========================================================================================================//
+                if (gGameplayStatics->ProjectWorldToScreen(g_PlayerController, HeadPos, false, &HeadPosSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, lowerarm_l, false, &lowerarm_lSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, upper_r, false, &upper_rPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, upper_l, false, &upper_lPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, lowerarm_r, false, &lowerarm_rPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, hand_r, false, &hand_rPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, hand_l, false, &hand_lPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, thigh_l, false, &thigh_lPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, calf_l, false, &calf_lPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, foot_l, false, &foot_lPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, thigh_r, false, &thigh_rPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, calf_r, false, &calf_rPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, foot_r, false, &foot_rPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, neck_01, false, &neck_01PoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, pelvis, false, &pelvisPoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, RootPos, false, &RootPosSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, spine_01, false, &spine_01PoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, spine_02, false, &spine_02PoSC) &&
+                    gGameplayStatics->ProjectWorldToScreen(g_PlayerController, spine_03, false, &spine_03PoSC)) {
+////==========================================================================================================//
+                if (ESP[4]) {
+                    FVector2D head = {HeadPosSC.X, HeadPosSC.Y};//head
+                    FVector2D 左肩膀 = {upper_lPoSC.X, upper_lPoSC.Y};//左上肩
+                    FVector2D 右肩膀 = {upper_rPoSC.X, upper_rPoSC.Y};//右上肩
+                    FVector2D 右小臂 = {lowerarm_rPoSC.X, lowerarm_rPoSC.Y};//右小臂
+                    FVector2D 左小臂 = {lowerarm_lSC.X, lowerarm_lSC.Y};//左小臂
+                    FVector2D 右大腿 = {thigh_rPoSC.X, thigh_rPoSC.Y};//右大腿
+                    FVector2D 左大腿 = {thigh_lPoSC.X, thigh_lPoSC.Y};//左大腿
+                    FVector2D 左小腿 = {calf_lPoSC.X, calf_lPoSC.Y};//左小腿
+                    FVector2D 右小腿 = {calf_rPoSC.X, calf_rPoSC.Y};//右小腿
+                    FVector2D 腰部 = {spine_01PoSC.X, spine_01PoSC.Y};//右小腿
+                    FVector2D 腰部3 = {spine_03PoSC.X, spine_03PoSC.Y};//右小腿
+                    FVector2D Neck = {neck_01PoSC.X, neck_01PoSC.Y};//右小腿
+                    FVector2D 腰部2 = {spine_02PoSC.X, spine_02PoSC.Y};//右小腿
+                    float boxWidth = 7.f - Distance * 0.03;
+                    
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("Head", {0, 0, 0}), false))//头
+                    {
+                    DrawLine(Canvas,head,HeadPosSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,head,HeadPosSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->/*落*/PlayerCameraManager,Player->GetBonePos("neck_01", {0, 0, 0}), false))//Neck
+                    {
+                    DrawLine(Canvas,Neck,HeadPosSC,1.5,White);
+                    DrawLine(Canvas,Neck,spine_03PoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,Neck,HeadPosSC,1.5,Green);
+                    DrawLine(Canvas,Neck,spine_03PoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("upperarm_r", {0, 0, 0}), false))//上面的肩膀右
+                    {
+                    DrawLine(Canvas,右肩膀,neck_01PoSC,1.5,White);
+                    DrawLine(Canvas,右肩膀,hand_rPoSC,1.5,White);
+                    }else {
+                    DrawLine(Canvas,右肩膀,neck_01PoSC,1.5,Green);
+                    DrawLine(Canvas,右肩膀,hand_rPoSC,1.5,Green);
+                    }
+                    
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("upperarm_l", {0, 0, 0}), false))//上面的肩膀左
+                    {
+                    DrawLine(Canvas,左肩膀,lowerarm_lSC,1.5,White);
+                    DrawLine(Canvas,左肩膀,neck_01PoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,左肩膀,lowerarm_lSC,1.5,Green);
+                    DrawLine(Canvas,左肩膀,neck_01PoSC,1.5,Green);
+                    }
+                    
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("lowerarm_r", {0, 0, 0}), false))//上面的手臂右
+                    {
+                    DrawLine(Canvas,右小臂,lowerarm_rPoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,右小臂,lowerarm_rPoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("lowerarm_l", {0, 0, 0}), false))//上面的手臂左
+                    {
+                    DrawLine(Canvas,左小臂,lowerarm_lSC,1.5,White);
+                    DrawLine(Canvas,左小臂,hand_lPoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,左小臂,lowerarm_lSC,1.5,Green);
+                    DrawLine(Canvas,左小臂,hand_lPoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("spine_03", {0, 0, 0}), false))//脊柱3
+                    {
+                    DrawLine(Canvas,腰部3,spine_02PoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,腰部3,spine_02PoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("spine_02", {0, 0, 0}), false))//脊柱2
+                    {
+                    DrawLine(Canvas,腰部2,spine_01PoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,腰部2,spine_01PoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("spine_01", {0, 0, 0}), false))//脊柱1
+                    {
+                    DrawLine(Canvas,腰部,pelvisPoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,腰部,pelvisPoSC,1.5,Green);
+                    }
+                    
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("thigh_l", {0, 0, 0}), false))//大腿左
+                    {
+                    DrawLine(Canvas,左大腿,calf_lPoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,左大腿,calf_lPoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("thigh_r", {0, 0, 0}), false))//大腿右
+                    {
+                    DrawLine(Canvas,右大腿,calf_rPoSC,1.5,White);
+                    DrawLine(Canvas,右大腿,thigh_lPoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,右大腿,calf_rPoSC,1.5,Green);
+                    DrawLine(Canvas,右大腿,thigh_lPoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("calf_l", {0, 0, 0}), false))//小腿左
+                    {
+                    DrawLine(Canvas,左小腿,foot_lPoSC,1.5,White);
+                    } else{
+                    DrawLine(Canvas,左小腿,foot_lPoSC,1.5,Green);
+                    }
+                    if(!g_PlayerController->LineOfSightTo(g_PlayerController->PlayerCameraManager,Player->GetBonePos("calf_r", {0, 0, 0}), false))//小腿右
+                    {
+                    DrawLine(Canvas,右小腿,calf_rPoSC,1.5,White);
+                    DrawLine(Canvas,右小腿,foot_rPoSC,1.5,White);
+                    } else {
+                    DrawLine(Canvas,右小腿,foot_rPoSC,1.5,Green);
+                    DrawLine(Canvas,右小腿,calf_rPoSC,1.5,Green);
+                    }
+                }            
+                                             
+////==========================================================================================================//
+                bool IsVisible = g_PlayerController->LineOfSightTo(Player, {0,0,0}, true);
+
+if (ESP[3]){
+if(Player->bEnsure){
+if (IsVisible)
+DrawLine(Canvas, {static_cast<float>(screenWidth / 2), 0}, FVector2D(HeadPosSC.X, HeadPosSC.Y - 62), 1.5f,COLOR_GREEN);
+else
+DrawLine(Canvas, {static_cast<float>(screenWidth / 2), 0}, FVector2D(HeadPosSC.X, HeadPosSC.Y - 62), 1.5f,COLOR_WHITE);
+}else{
+if (IsVisible)
+DrawLine(Canvas, {static_cast<float>(screenWidth / 2), 0}, FVector2D(HeadPosSC.X, HeadPosSC.Y - 62), 1.5f,COLOR_CYAN);
+else
+DrawLine(Canvas, {static_cast<float>(screenWidth / 2), 0}, FVector2D(HeadPosSC.X, HeadPosSC.Y - 62), 1.5f,COLOR_RED);
+}
+}
+
+////==========================================================================================================//                             
+ 
+
+if (ESP[6] || ESP[5]) {
+    auto AboveHead = Player->GetHeadLocation(true);
+    AboveHead.Z += 35.f;
+    FVector2D AboveHeadSc;
+
+    if (gGameplayStatics->ProjectWorldToScreen(localPlayerController, AboveHead, false, &AboveHeadSc)) {
+        float yOffset = std::min(Distance * 0.05f, 30.f);
+
+        //ESP HEALTH BAR
+        float CurHP = std::max(0.f, std::min(Player->Health, Player->HealthMax));
+        float MaxHP = Player->HealthMax;
+        FLinearColor ColorHP;
+
+        float healthRatio = CurHP / MaxHP;
+        if (healthRatio > 0.7f) {
+            ColorHP = {0.f, 1.f, 0.f, 0.09f};
+        } else if (healthRatio > 0.4f) {
+            ColorHP = {1.f, 1.f, 0.f, 0.5f};
+        } else if (healthRatio > 0.1f) {
+            ColorHP = {1.f, 0.f, 0.f, 0.5f};
+        } else {
+            ColorHP = {0.5f, 0.f, 0.5f, 0.5f};
+        }
+
+        if (CurHP == 0 && !Player->bDead) {
+            ColorHP = {1.f, 0, 0, 1.f};
+            CurHP = Player->NearDeathBreath;
+            USTCharacterNearDeathComp *NearDeathComponent = Player->NearDeatchComponent;
+            if (NearDeathComponent) {
+                MaxHP = NearDeathComponent->BreathMax;
+            }
+        }
+
+        auto HealthBarPos = AboveHeadSc;
+        HealthBarPos.Y += 10 - yOffset; // Adjusted for spacing under name
+
+        float mWidthScale = std::min(0.1f * Distance, 35.f);
+        float mWidth = 75.f - mWidthScale;
+        float mHeight = mWidth * 0.175f;
+        HealthBarPos.X -= (mWidth / 2);
+        HealthBarPos.Y -= (mHeight * 1.5f);
+
+        DrawFilledRect(Canvas, {HealthBarPos.X, HealthBarPos.Y}, (CurHP * mWidth / MaxHP), mHeight, ColorHP);
+        DrawRectangle(Canvas, {HealthBarPos.X, HealthBarPos.Y}, mWidth, mHeight, 1.0f, {1.f, 1.f, 1.f, 1.f});
+
+        // 2️⃣ Team ID & Player Name + Distance 
+        FVector BelowRoot = Root;
+        BelowRoot.Z -= 25.f;
+        FVector2D BelowRootSc;
+
+        if (gGameplayStatics->ProjectWorldToScreen(localPlayerController, BelowRoot, false, &BelowRootSc)) {
+            float textYOffset = 5.0f; // Spacing between text elements
+
+            // 📌 Team ID + Name
+            std::wstring playerInfo = L"[" + std::to_wstring(Player->TeamID) + L"] ";
+            if (Player->bEnsure) {
+                playerInfo += L"Bot";
+            } else {
+                playerInfo += Player->PlayerName.ToWString();
+            }
+            
+            // Bigger Font Size
+            int infoFontSize = max(7, 14 - (int)(Distance / 80));
+            tslFontUI->LegacyFontSize = infoFontSize;
+
+            DrawOutlinedTextFPS(Canvas, FString(playerInfo),
+                                FVector2D(BelowRootSc.X, BelowRootSc.Y + textYOffset), 
+                                COLOR_YELLOW, COLOR_BLACK, true);
+            textYOffset += 18.0f; // Move down for distance
+
+            // 📌 Distance (White)
+            std::wstring distanceText = std::to_wstring((int)Distance) + L" M";
+            int distanceFontSize = max(8, 16 - (int)(Distance / 80));
+
+            DrawOutlinedTextFPS(Canvas, FString(distanceText),
+                                FVector2D(BelowRootSc.X, BelowRootSc.Y + textYOffset), 
+                                COLOR_WHITE, COLOR_BLACK, true);
+        }
+    }
+}
+
+}}
+
+
+   if (ESP[11])
+{
+    static bool hasTriggered = false; // Add a flag to control execution
+    
+    if (!hasTriggered) // Check if the code has already been executed
+    {
+        std::vector<ASTExtraGameStateBase*> ChickenBase;
+        GetAllActors(ChickenBase);
+
+        for (auto actor = ChickenBase.begin(); actor != ChickenBase.end(); actor++) {
+            auto InGame = *actor;
+            
+            if ((int)InGame->AliveTeamNum == 1)
+            {
+                MessageBoxExt(0, (char16_t *)xxx4.c_str(), (char16_t *)f3.c_str());
+                hasTriggered = true; // Set the flag to true to prevent re-execution
+                break; // Exit the loop after execution
+            }
+        }
+    }
+}
+
+ 
+						if (ESP[8]) {   
+                        
+                       std::vector<ASTExtraVehicleBase*> VehicleBase;
+                        GetAllActors(VehicleBase);
+                        for (auto actor = VehicleBase.begin(); actor != VehicleBase.end(); actor++) {
+                            auto Vehicle = *actor;
+                            if (!Vehicle->Mesh)
+                                 continue;
+                            if (!Vehicle->RootComponent)
+                                 continue;
+float Distance = Vehicle->GetDistanceTo(localPlayer) / 100.f;
+if (Distance > 100)
+continue;
+                            FVector2D VehiclePos;
+                            if (gGameplayStatics->ProjectWorldToScreen(g_PlayerController, Vehicle->RootComponent->RelativeLocation, false, &VehiclePos)) {
+                                string s = GetVehicleName(Vehicle);
+                                
+                                s += " - ";
+                                s += to_string((int) Distance);
+                                s += "M";
+tslFontUI->LegacyFontSize = max(5, 8 - (int)(Distance / 80));
+DrawOutlinedTextFPS(Canvas, FString(s), VehiclePos, COLOR_YELLOW, COLOR_BLACK, true);
+                                 
+                                 std::string healthFuelText;
+                                 
+                                    if (!healthFuelText.empty())
+                    healthFuelText += " - ";
+                     int healthPercentage = static_cast<int>((Vehicle->VehicleCommon->HP / Vehicle->VehicleCommon->HPMax) * 100);
+                     
+
+                     healthFuelText += "(HP: " + std::to_string(healthPercentage) + "%)";
+                     
+                     int fuelPercentage = (int)(100 * Vehicle->VehicleCommon->Fuel / Vehicle->VehicleCommon->FuelMax);
+                     
+
+                        healthFuelText += "(Gas: " + std::to_string(fuelPercentage) + "%)";
+                    tslFontUI->LegacyFontSize = max(5, 8 - (int)(Distance / 80));
+                    DrawOutlinedTextFPS(Canvas, FString(healthFuelText), FVector2D(VehiclePos.X, VehiclePos.Y-20.f), COLOR_RED, COLOR_BLACK, true);
+                        }}}
+
+////==========================================================================================================//
+               
+          
+			if (ESP[9]) {
+                
+                
+          std::vector<APickUpListWrapperActor*>LootboxBase;
+                   GetAllActors(LootboxBase);
+                   
+                    for (auto actor = LootboxBase.begin(); actor != LootboxBase.end(); actor++) {
+                        auto Pick = *actor;                                             
+                                                
+                         if (!Pick->RootComponent)
+                                continue;
+                    
+                          float Distance = Pick->GetDistanceTo(localPlayer) / 100.0f;
+                                                                    
+                         if (Distance >150.0)
+                                continue;
+                   
+                           FVector2D PickUpListsPos;                  
+                    
+                         if (W2S(Pick->K2_GetActorLocation(), &PickUpListsPos)) {
+                                std::string s = "LootBox";
+                                s += "(";
+                                s += std::to_string((int) Distance);
+                                s += "M)";
+                            
+                        
+                        DrawOutlinedTextFPS(Canvas, FString(s), {PickUpListsPos.X, PickUpListsPos.Y}, 白色, 黑色, true);                            
+                        }
+                    }
+                }
+                                
+
+
+if (localPlayerController != 0){
+//ISLAND
+}else{
+
+}   					
+                
+////==========================================================================================================//                             
+                 if (ESP[10]) {
+                   std::vector<ASTExtraGrenadeBase*>Throw;
+                   
+                    GetAllActors(Throw);
+                    for (auto actor = Throw.begin(); actor != Throw.end(); actor++) {
+                         auto Throw = *actor;
+                         
+                    if (!Throw->RootComponent)
+                           continue;
+                           
+                     float Distance = Throw->GetDistanceTo(localPlayer) / 100.0f;
+                     if (Distance > 100.0)
+                           continue;            
+                     FVector2D GrenadePos;
+                          if (W2S(Throw->K2_GetActorLocation(), &GrenadePos)) {
+                                std::string classname = Throw->GetName();
+                            if (classname.find("BP_Grenade_Burn_C") != std::string::npos) {
+                                
+                                std::string s =  "!!Molotov Around!!";
+                                s += "-";
+                                s += std::to_string((int) Distance);
+                                s += "M";
+								DrawOutlinedTextFPS(Canvas, FString(s), GrenadePos, COLOR_RED, COLOR_BLACK, true);
+								}
+								if (classname.find("BP_Grenade_Shoulei_C") != std::string::npos) {
+								std::string s = "!!Grenade!!";
+						    	s += "-";
+								s += std::to_string((int)Distance);
+								s += "M";
+                                tslFontUI->LegacyFontSize = max(5, 12 - (int)(Distance / 80));
+                                DrawOutlinedTextFPS(Canvas, FString(s), GrenadePos, COLOR_RED, COLOR_BLACK, true);
+                            }
+                        }
+                    }
+                }                                  
+				
+				
+		   if (AimBot[1] ) {
+                    DrawCircle(Canvas, (screenWidth / 2), (screenHeight / 2), FOVsize, 100, COLOR_RED);
+                }
+////==========================================================================================================//
+
+g_LocalPlayer = localPlayer;
+g_PlayerController = localPlayerController;
+
+if (totalEnemies > 0 || totalBots > 0) {
+std::string 玩家;
+玩家 = "PLAYER ";
+玩家 += std::to_string(totalEnemies);
+玩家 += "|";
+玩家 += "BOT'S ";
+玩家 += std::to_string(totalBots);
+tslFontUI->LegacyFontSize = 19;
+DrawOutlinedTextFPS(Canvas, FString(玩家), {(float)screenWidth / 2, 75},COLOR_RED, COLOR_BLACK, true);
+}}}}
+
+
+  
+////==========================================================================================================//
+
+
+if (Canvas) {
+    char Menunamee[256];
+    sprintf(Menunamee, OBFUSCATE(""));
+
+    // Dynamically adjust font size based on screen width
+    int screenWidth = Canvas->SizeX;
+    int screenHeight = Canvas->SizeY;
+    
+    // Set font size proportionally (e.g., 4% of screen width)
+    tslFontUI->LegacyFontSize = screenWidth * 0.012f; // Adjust multiplier as needed
+
+    // Calculate text width dynamically
+    int textWidthMenunamee = strlen(Menunamee) * tslFontUI->LegacyFontSize * 0.1f; // Adjust multiplier for better fitting
+
+    // Center text dynamically
+    int centerX = screenWidth / 2;
+    int menunameePositionX = centerX - (textWidthMenunamee / 2);
+    
+    // Adjust vertical position relative to screen height
+    int menunameePositionY = screenHeight * 0.16f; // 8% from the top
+
+    // Draw text with outline
+    DrawOutlinedTextFPS(Canvas, Menunamee, {menunameePositionX, menunameePositionY}, COLOR_DEEPSKYBLUE, COLOR_BLACK, true);
+}
+
+////==========================================================================================================//	
+
+
+tslFontUI->LegacyFontSize = 15;
+ DrawOutlinedTextFPS(Canvas, FString("THUNDER VIP 3.8"), {(float) screenWidth / 15 + screenWidth /15.2, 670}, COLOR_RED, COLOR_BLACK, true); 
+
+
+THUNDER_GUI::SetupCanvas(Canvas,tslFontUI);
+static FVector2D WindowPos = {300,200};
+static bool IsOpen = true;
+static float TempValue = 0;        
+tslFontUI->LegacyFontSize = 13;
+{
+static bool isLogin = false, logginIn = false, isSelected = false;
+static std::string err;
+
+if (!isLogin) {
+    THUNDER_GUI::Text("Please Copy Key before open mod");
+    static char s[64]; 
+    auto key = getClipboardText();
+    strncpy(s, key.c_str(), sizeof s);
+    err = Login(s);
+    if (err == "OK") {
+        isLogin = bValid && g_Auth == g_Token;
+    }
+} 
+else if (!isSelected)
+{   
+    isSelected = true;
+
+    std::string Op1 = "Esp Activate Successfull";
+    std::u16string xxx1 = convertToUtf16(Op1);
+    std::string Op2 = "Aimbot Activate Successfull";
+    std::u16string xxx2 = convertToUtf16(Op2);
+    std::string Op3 = "Select Version: \n1. Yes = [ Smart Aimbot (Safe) ] \n2. No = [ ESP ( safe) ] ";
+    std::u16string xxx3 = convertToUtf16(Op3);
+
+    if (MessageBoxExt(1, (char16_t *)xxx3.c_str(), (char16_t *)f2.c_str()) == 1)
+    {
+        ESP[4] = true;
+        ESP[3] = true;
+        ESP[5] = true;
+        ESP[6] = true;
+        ESP[8] = true;
+        ESP[9] = true;
+        ESP[10] = true;
+        ESP[11] = true;
+        ESP[12] = true;
+        AimBot[1] = true;
+        AimBot[2] = true;
+        AimBot[4] = true;
+        Bullet[1] = false;
+        Canvas2 = true;
+        Range = 150.0f;
+        绘制距离 = 300.0f;
+        Speed_Aim = 1.5;
+        FOVsize = 150;
+
+        MessageBoxExt(0, (char16_t *)xxx2.c_str(), (char16_t *)f2.c_str());
+    }
+    else
+    {
+        ESP[4] = true;
+        ESP[3] = true;
+        ESP[5] = true;
+        ESP[6] = true;
+        ESP[8] = true;
+        ESP[9] = true;
+        ESP[10] = true;
+        ESP[11] = true;
+        AimBot[1] = false;
+        AimBot[2] = false;
+        AimBot[4] = false;
+        Canvas1 = false;
+
+        // Reset & Re-enable Aimbot
+        AimBot[1] = true;
+        AimBot[2] = true;
+        AimBot[4] = true;
+        Canvas2 = true;
+        Range = 150.0f;
+        绘制距离 = 300.0f;
+        Speed_Aim = 1.5;
+        FOVsize = 150;
+
+        MessageBoxExt(0, (char16_t *)xxx1.c_str(), (char16_t *)f2.c_str());
+    }}
+}}
+////==========================================================================================================// 
+void *(*orig_PostRender)(UGameViewportClient* ViewportClient, UCanvas* Canvas);
+void *new_PostRender(UGameViewportClient* ViewportClient, UCanvas* Canvas) {
+    RenderESP(Canvas, Canvas->SizeX, Canvas->SizeY);
+    return orig_PostRender(ViewportClient, Canvas);
+}
+
+
+////==========================================================================================================//
+void PostrenderDraw() {
+    auto GViewport = GetGameViewport();
+    if (GViewport) {
+        int postrender_idx = 132;
+        auto f_mprotect = [](uintptr_t addr, size_t len, int32_t prot) -> int32_t {
+            static_assert(PAGE_SIZE == 4096);
+            constexpr size_t page_size = static_cast<size_t>(PAGE_SIZE);
+            void* start = reinterpret_cast<void*>(addr & -page_size);
+            uintptr_t end = (addr+len+page_size - 1) & -page_size;
+            return mprotect(start, end - reinterpret_cast<uintptr_t>(start), prot);
+        };
+        auto VTable = (void **)GViewport->VTable;
+        if (VTable && (VTable[postrender_idx] != new_PostRender)) {
+            orig_PostRender = decltype(orig_PostRender)(VTable[postrender_idx]);
+            f_mprotect((uintptr_t)(&VTable[postrender_idx]), sizeof(uintptr_t), PROT_READ | PROT_WRITE);
+            VTable[postrender_idx] = (void *)new_PostRender;
+        }
+    }
+}
+////==========================================================================================================//
+    
+
+
+
+
+
+
+void *主线程(void *) {
+
+    while (!UE4) {
+        UE4 = Tools::GetBaseAddress("libUE4.so");
+        sleep(1);
+    }    
+
+    while (!g_App) {
+        g_App = *(android_app * *)(UE4 + GNativeAndroidApp_Offset);
+        
+        sleep(1);
+    }
+    FName::GNames = GetGNames();
+    while (!FName::GNames) {
+        FName::GNames = GetGNames();
+        sleep(1);
+    }
+    *(uintptr_t *)&MessageBoxExt = UE4 + 0x76CC3E0;
+    UObject::GUObjectArray = (FUObjectArray * )(UE4 + GUObject_Offset);
+
+    static bool loadFont = false;
+	if (!loadFont)
+	{
+		pthread_t t;
+		pthread_create(&t, 0, LoadFont, 0);
+		loadFont = true;
+	}
+    if (g_App->onInputEvent != onInputEvent) {
+        orig_onInputEvent = decltype(orig_onInputEvent)(g_App->onInputEvent);
+        g_App->onInputEvent = onInputEvent;
+    }
+    
+    PostrenderDraw();
+Tools::Hook((void *)(UE4 + 0x6090788), (void *)xThunderBulletInner, (void **)&ThunderBulletInner);
+    return 0;    
+}
+   
+    
+__attribute__((constructor)) void _init() {
+    pthread_t Ptid;
+	pthread_create(&Ptid, 0,主线程, 0);	
+	
+}
+
 
